@@ -1,172 +1,89 @@
-# Arduino CAN
+# ESP32 CAN
+
+## Introduction
+
+- CAN stands for Controller Area Network (CAN bus). This protocol is very popular in automotive domain. In order to understand more about history, benefits, characteristics, message format of CAN, you can refer:
+http://www.ni.com/white-paper/2732/en/
+http://www.ti.com/lit/an/sloa101b/sloa101b.pdf
+- As you knew in Introduction to ESP32, ESP32 also supports CAN interface. So I am going to make a demo for this with Arduino.
+- In this demo, 2 ESP32 modules will be used: first module will send the string "hellocan" to second module. The second module will convert the string to upper case and respond it back to first module and first module will show the result in theTerminal.
+
+## Hardware
+
+ ESP32 only supplies CAN controller. So you need CAN transceiver for this demo. I bought 2 CAN trasceivers here.
+ 
+ ![Connection](https://1.bp.blogspot.com/-nuM3-7ENLbE/WaqHAVw-vjI/AAAAAAAAEPk/HsVOT7jnwdkSv9iFcQOgCIfjSmYJ3xuQQCEwYBhgL/s320/esp32_CAN_1.jpg)]
+ 
+ 
+ - ESP32 GPIO5 will act as CAN_Tx.
+- ESP32 GPIO4 will act as CAN_Rx.
+- So you can connect pins belows (ESP32_X: module ESP32 X, CAN_X: module CAN X, where X is 1 or 2 since we have 2 modules):
+| ESP32 Pin Configuration | CAN Configuration |
+| :----------------------| :----------------|
+| ESP32_1 IO5 | CAN_1 CTX | 
+| ESP32_1 IO4 | CAN_1 CRX |
+| CAN_1 CANH | CAN_2 CANH |
+| CAN_1 CANL | CAN_2 CANL |
+| ESP32_2 IO5 | CAN_2 CTX |
+| ESP32_2 IO4 | CAN_2 CRX |
 
 
-An Arduino library for sending and receiving data using CAN bus.
+## Software
 
-## Compatible Hardware
+- In order to make this demo, I used CAN driver which is made by Thomas Barth (Thanks Thomas :))
+- Download the CAN library for ESP32 here. Unzip it and copy to "Arduino/libraries" folder.
+- Source code for first ESP32 module: receiving string, converting to upper case and respond back:
 
-* [Microchip MCP2515](http://www.microchip.com/wwwproducts/en/en010406) based boards/shields
-  * [Arduino MKR CAN shield](https://store.arduino.cc/arduino-mkr-can-shield)
-* [Espressif ESP32](http://espressif.com/en/products/hardware/esp32/overview)'s built-in [SJA1000](https://www.nxp.com/products/analog/interfaces/in-vehicle-network/can-transceiver-and-controllers/stand-alone-can-controller:SJA1000T) compatible CAN controller with an external 3.3V CAN transceiver
+#include <ESP32CAN.h>
+#include <CAN_config.h>
 
-### Microchip MCP2515 wiring
+/* the variable name CAN_cfg is fixed, do not change */
+CAN_device_t CAN_cfg;
 
-| Microchip MCP2515 | Arduino |
-| :---------------: | :-----: |
-| VCC | 5V |
-| GND | GND |
-| SCK | SCK |
-| SO | MISO |
-| SI | MOSI |
-| CS | 10 |
-| INT | 2 |
-
-
-`CS` and `INT` pins can be changed by using `CAN.setPins(cs, irq)`. `INT` pin is optional, it is only needed for receive callback mode. If `INT` pin is used, it **must** be interrupt capable via [`attachInterrupt(...)`](https://www.arduino.cc/en/Reference/AttachInterrupt).
-
-**NOTE**: Logic level converters must be used for boards which operate at 3.3V.
-
-### Espressif ESP32 wiring
-
-Requires an external 3.3V CAN transceiver, such as a [TI SN65HVD230](http://www.ti.com/product/SN65HVD230).
-
-| CAN transceiver | ESP32 |
-| :-------------: | :---: |
-| 3V3 | 3V3 |
-| GND | GND |
-| CTX | GPIO_5 |
-| CRX | GPIO_4 |
-
-`CTX` and `CRX` pins can be changed by using `CAN.setPins(rx, tx)`.
-
-## Installation
-
-### Using the Arduino IDE Library Manager
-
-1. Choose `Sketch` -> `Include Library` -> `Manage Libraries...`
-2. Type `CAN` into the search box.
-3. Click the row to select the library.
-4. Click the `Install` button to install the library.
-
-### Using Git
-
-```sh
-`cd ~/Documents/Arduino/libraries/
-`git clone https://github.com/sandeepmistry/arduino-CAN CAN
-```
-
-## MCP2515 CAN Controller Library for Arduino
-
-### Compatibility with the ACAN library
-
-This library is fully compatible with the Teensy 3.x ACAN library https://github.com/pierremolinaro/acan, it uses a very similar API and the same `CANMessage` class for handling messages.
-
-### ACAN2515 library description
-ACAN2515 is a driver for the MCP2515 CAN Controller. It runs on any Arduino compatible board.
-
-You can choose any frequency for your MCP2515, the actual frequency is a parameter of the library.
-
-The driver supports many bit rates: for a 16 MHz quartz, the CAN bit timing calculator finds settings for standard 62.5 kbit/s, 125 kbit/s, 250 kbit/s, 500 kbit/s, 1 Mbit/s, but also for an exotic bit rate as 727 kbit/s. If the desired bit rate cannot be achieved, the `begin` method does not configure the hardware and returns an error code.
-
-> Driver API is fully described by the PDF file in the `extras` directory.
-
-### Demo Sketch
-
-> The demo sketch is in the `examples/LoopBackDemo` directory.
-
-Configuration is a four-step operation.
-
-1. Instanciation of the `settings` object : the constructor has one parameter: the wished CAN bit rate. The `settings` is fully initialized.
-2. You can override default settings. Here, we set the `mRequestedMode` property to true, enabling to run demo code without any additional hardware (no CAN transceiver needed). We can also for example change the receive buffer size by setting the `mReceiveBufferSize` property.
-3. Calling the `begin` method configures the driver and starts CAN bus participation. Any message can be sent, any frame on the bus is received. No default filter to provide.
-4. You check the `errorCode` value to detect configuration error(s).
-
-```cpp
-static const byte MCP2515_CS  = 20 ; // CS input of MCP2515, adapt to your design
-static const byte MCP2515_INT = 37 ; // INT output of MCP2515, adapt to your design
-
-ACAN2515 can (MCP2515_CS, SPI, MCP2515_INT) ; // You can use SPI2, SPI3, if provided by your microcontroller
-
-const uint32_t QUARTZ_FREQUENCY = 16 * 1000 * 1000 ; // 16 MHz
-
-void setup () {
-  Serial.begin (9600) ;
-  while (!Serial) {}
-  Serial.println ("Hello") ;
-  ACAN2515Settings settings (QUARTZ_FREQUENCY, 125 * 1000) ; // 125 kbit/s
-  settings.mRequestedMode = ACAN2515Settings::LoopBackMode ; // Select loopback mode
-  const uint16_t errorCode = can.begin (settings, [] { can.isr () ; }) ;
-  if (0 == errorCode) {
-    Serial.println ("Can ok") ;
-  }else{
-    Serial.print ("Error Can: 0x") ;
-    Serial.println (errorCode, HEX) ;
-  }
+void setup() {
+    Serial.begin(115200);
+    Serial.println("iotsharing.com CAN demo");
+    /* set CAN pins and baudrate */
+    CAN_cfg.speed=CAN_SPEED_1000KBPS;
+    CAN_cfg.tx_pin_id = GPIO_NUM_5;
+    CAN_cfg.rx_pin_id = GPIO_NUM_4;
+    /* create a queue for CAN receiving */
+    CAN_cfg.rx_queue = xQueueCreate(10,sizeof(CAN_frame_t));
+    //initialize CAN Module
+    ESP32Can.CANInit();
 }
-```
 
-Now, an example of the `loop` function. As we have selected loop back mode, every sent frame is received.
+void loop() {
+    CAN_frame_t rx_frame;
+    //receive next CAN frame from queue
+    if(xQueueReceive(CAN_cfg.rx_queue,&rx_frame, 3*portTICK_PERIOD_MS)==pdTRUE){
 
-```cpp
-static uint32_t gSendDate = 0 ;
-static uint32_t gSentCount = 0 ;
-static uint32_t gReceivedCount = 0 ;
+      //do stuff!
+      if(rx_frame.FIR.B.FF==CAN_frame_std)
+        printf("New standard frame");
+      else
+        printf("New extended frame");
 
-void loop () {
-  CANMessage message ;
-  if (gSendDate < millis ()) {
-    message.id = 0x542 ;
-    const bool ok = can.tryToSend (message) ;
-    if (ok) {
-      gSendDate += 2000 ;
-      gSentCount += 1 ;
-      Serial.print ("Sent: ") ;
-      Serial.println (gSentCount) ;
+      if(rx_frame.FIR.B.RTR==CAN_RTR)
+        printf(" RTR from 0x%08x, DLC %d\r\n",rx_frame.MsgID,  rx_frame.FIR.B.DLC);
+      else{
+        printf(" from 0x%08x, DLC %d\n",rx_frame.MsgID,  rx_frame.FIR.B.DLC);
+        /* convert to upper case and respond to sender */
+        for(int i = 0; i < 8; i++){
+          if(rx_frame.data.u8[i] >= 'a' && rx_frame.data.u8[i] <= 'z'){
+            rx_frame.data.u8[i] = rx_frame.data.u8[i] - 32;
+          }
+        }
+      }
+      //respond to sender
+      ESP32Can.CANWriteFrame(&rx_frame);
     }
-  }
-  if (can.receive (message)) {
-    gReceivedCount += 1 ;
-    Serial.print ("Received: ") ;
-    Serial.println (gReceivedCount) ;
-  }
 }
-```
-`CANMessage` is the class that defines a CAN message. The `message` object is fully initialized by the default constructor. Here, we set the `id` to `0x542` for sending a standard data frame, without data, with this identifier.
-
-The `can.tryToSend` tries to send the message. It returns `true` if the message has been sucessfully added to the driver transmit buffer.
-
-The `gSendDate` variable handles sending a CAN message every 2000 ms.
-
-`can.receive` returns `true` if a message has been received, and assigned to the `message`argument.
-
-### Use of Optional Reception Filtering
-
-The MCP2515 CAN Controller implements two acceptance masks and six acceptance filters. The driver API enables you to fully manage these registers.
-
-For example (`loopbackUsingFilters` sketch):
-
-```cpp
-  ACAN2515Settings settings (QUARTZ_FREQUENCY, 125 * 1000) ;
-  settings.mRequestedMode = ACAN2515Settings::LoopBackMode ; // Select loopback mode
-  const ACAN2515Mask rxm0 = extended2515Mask (0x1FFFFFFF) ; // For filter #0 and #1
-  const ACAN2515Mask rxm1 = standard2515Mask (0x7F0, 0xFF, 0) ; // For filter #2 to #5
-  const ACAN2515AcceptanceFilter filters [] = {
-    {extended2515Filter (0x12345678), receive0},
-    {extended2515Filter (0x18765432), receive1},
-    {standard2515Filter (0x560, 0x55, 0), receive2}
-  } ;
-  const uint16_t errorCode = can.begin (settings, [] { can.isr () ; }, rxm0, rxm1, filters, 3) ;
-```
-
-These settings enable the acceptance of extended frames whose identifier is 0x12345678 or 0x18765432, and data frames whose identifier is 0x560 and first data byte, if any, is 0x55.
-
-The `receive0`, `receive1`, `receive2` functions are call back functions, handled by the `can.dispatchReceivedMessage` function:
 
 
-```cpp
-void loop () {
-  can.dispatchReceivedMessage () ; // Do not use can.receive any more
-  ...
-}
-```
 
+- Source code for second ESP32 module: sending the string that need to be converted to upper case, receiving response and show it to Terminal
+
+## Result
+
+![Results](https://1.bp.blogspot.com/-aoKC-qLvmxA/WaqHBfTtfCI/AAAAAAAAEPo/Rj9ecF_g1msfqKJeYWiQnZs-um-p3ReuQCLcBGAs/s640/esp32_CAN.png)]
