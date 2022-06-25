@@ -1,6 +1,6 @@
 # Arduino CAN
 
-[![Build Status](http://www.vipinpawar.in)]([https://travis-ci.org/sandeepmistry/arduino-CAN](https://github.com/hilo-curado1987/ESP32-CAN))
+`[![Build Status](http://www.vipinpawar.in)]([https://travis-ci.org/sandeepmistry/arduino-CAN](https://github.com/hilo-curado1987/ESP32-CAN))
 
 An Arduino library for sending and receiving data using CAN bus.
 
@@ -52,8 +52,8 @@ Requires an external 3.3V CAN transceiver, such as a [TI SN65HVD230](http://www.
 ### Using Git
 
 ```sh
-cd ~/Documents/Arduino/libraries/
-git clone https://github.com/sandeepmistry/arduino-CAN CAN
+`cd ~/Documents/Arduino/libraries/
+`git clone https://github.com/sandeepmistry/arduino-CAN CAN
 ```
 
 ## API
