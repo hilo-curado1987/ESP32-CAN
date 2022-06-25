@@ -1,6 +1,5 @@
 # Arduino CAN
 
-`[![Build Status](http://www.vipinpawar.in)]([https://travis-ci.org/sandeepmistry/arduino-CAN](https://github.com/hilo-curado1987/ESP32-CAN))
 
 An Arduino library for sending and receiving data using CAN bus.
 
